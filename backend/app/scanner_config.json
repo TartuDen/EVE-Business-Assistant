@@ -1,0 +1,43 @@
+{
+  "excluded_keywords": [
+    "Firework",
+    "SKIN",
+    "Blueprint",
+    "Apparel",
+    "Festival",
+    "Crate",
+    "Collector",
+    "Abyssal",
+    "Mutaplasmid",
+    "Officer",
+    "Deadspace",
+    "Tournament",
+    "Limited"
+  ],
+  "allowed_category_keywords": [
+    "Charge",
+    "Drone",
+    "Module",
+    "Implant",
+    "Ship",
+    "Rig"
+  ],
+  "allowed_group_keywords": [
+    "Ammo",
+    "Charge",
+    "Script",
+    "Drone",
+    "Missile",
+    "Hybrid",
+    "Projectile",
+    "Crystal",
+    "Frequency",
+    "Module",
+    "Rig",
+    "Implant",
+    "Frigate",
+    "Destroyer",
+    "Cruiser",
+    "Industrial"
+  ]
+}

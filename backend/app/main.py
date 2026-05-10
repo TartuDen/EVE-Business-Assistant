@@ -68,14 +68,18 @@ def export_market_csv() -> StreamingResponse:
     writer.writerow(
         [
             "Item",
+            "Category",
             "Buy Price",
             "Sell Price",
-            "Margin %",
-            "Daily Volume",
+            "Net Margin %",
+            "30d Volume",
+            "Order Count",
             "Suggested Quantity",
             "Required ISK",
             "Expected Profit",
             "Risk",
+            "Manipulation Risk",
+            "Why Recommended",
             "Score",
         ]
     )
@@ -83,14 +87,18 @@ def export_market_csv() -> StreamingResponse:
         writer.writerow(
             [
                 item.item_name,
+                item.category,
                 item.recommended_buy_price,
                 item.recommended_sell_price,
                 item.net_margin_percent,
-                item.daily_volume,
+                item.avg_daily_volume_30d,
+                item.buy_order_count + item.sell_order_count,
                 item.suggested_quantity,
                 item.required_isk,
                 item.expected_profit,
                 item.risk,
+                item.manipulation_risk_score,
+                item.reason,
                 item.score,
             ]
         )

@@ -6,13 +6,15 @@ import { RiskBadge } from "../components/RiskBadge.jsx";
 import { api, formatIsk } from "../lib/api.js";
 
 const defaultFilters = {
+  safe_mode: true,
   starting_capital: 365000000,
   region_id: 10000002,
   station_id: 60003760,
-  max_isk_per_item: 75000000,
-  minimum_daily_volume: 20,
-  minimum_margin_percent: 5,
-  minimum_expected_profit: 500000,
+  max_isk_per_item: 25000000,
+  minimum_daily_volume: 500,
+  minimum_margin_percent: 4,
+  maximum_margin_percent: 25,
+  minimum_expected_profit: 100000,
   risk_level: "normal",
   result_limit: 50,
 };
@@ -39,6 +41,7 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
         max_isk_per_item: Number(filters.max_isk_per_item),
         minimum_daily_volume: Number(filters.minimum_daily_volume),
         minimum_margin_percent: Number(filters.minimum_margin_percent),
+        maximum_margin_percent: Number(filters.maximum_margin_percent),
         minimum_expected_profit: Number(filters.minimum_expected_profit),
         result_limit: Number(filters.result_limit),
       };
@@ -56,10 +59,20 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
       <aside className="rounded-lg border border-line bg-panel p-4 xl:sticky xl:top-4 xl:self-start">
         <h2 className="text-base font-semibold text-white">Filters</h2>
         <div className="mt-4 space-y-4">
+          <label className="flex items-center justify-between gap-3 rounded-md border border-line bg-hull px-3 py-2 text-sm text-slate-200">
+            <span>Beginner safe mode</span>
+            <input
+              type="checkbox"
+              checked={filters.safe_mode}
+              onChange={(event) => update("safe_mode", event.target.checked)}
+              className="h-4 w-4 accent-cyan"
+            />
+          </label>
           <NumberInput label="Starting capital" value={filters.starting_capital} onChange={(value) => update("starting_capital", value)} />
           <NumberInput label="Max ISK per item" value={filters.max_isk_per_item} onChange={(value) => update("max_isk_per_item", value)} />
           <NumberInput label="Minimum daily volume" value={filters.minimum_daily_volume} onChange={(value) => update("minimum_daily_volume", value)} />
           <NumberInput label="Minimum margin %" value={filters.minimum_margin_percent} onChange={(value) => update("minimum_margin_percent", value)} />
+          <NumberInput label="Maximum margin %" value={filters.maximum_margin_percent} onChange={(value) => update("maximum_margin_percent", value)} />
           <NumberInput label="Minimum expected profit" value={filters.minimum_expected_profit} onChange={(value) => update("minimum_expected_profit", value)} />
           <label className="block">
             <span className="text-sm text-slate-300">Risk level</span>
@@ -108,18 +121,21 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1220px] text-left text-sm">
               <thead className="border-b border-line bg-hull text-xs uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-3 py-3">Item</th>
+                  <th className="px-3 py-3">Category</th>
                   <th className="px-3 py-3">Buy Price</th>
                   <th className="px-3 py-3">Sell Price</th>
-                  <th className="px-3 py-3">Margin %</th>
-                  <th className="px-3 py-3">Daily Volume</th>
-                  <th className="px-3 py-3">Suggested Quantity</th>
+                  <th className="px-3 py-3">Net Margin %</th>
+                  <th className="px-3 py-3">30d Volume</th>
+                  <th className="px-3 py-3">Order Count</th>
+                  <th className="px-3 py-3">Suggested Qty</th>
                   <th className="px-3 py-3">Required ISK</th>
                   <th className="px-3 py-3">Expected Profit</th>
                   <th className="px-3 py-3">Risk</th>
+                  <th className="px-3 py-3">Why Recommended</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,14 +146,17 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
                     onClick={() => setSelected(item)}
                   >
                     <td className="px-3 py-3 font-medium text-white">{item.item_name}</td>
+                    <td className="px-3 py-3 text-slate-400">{item.category}</td>
                     <td className="px-3 py-3 text-slate-300">{formatIsk(item.recommended_buy_price)}</td>
                     <td className="px-3 py-3 text-slate-300">{formatIsk(item.recommended_sell_price)}</td>
                     <td className="px-3 py-3 text-mint">{item.net_margin_percent.toFixed(2)}%</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.daily_volume)}</td>
+                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.avg_daily_volume_30d)}</td>
+                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.buy_order_count + item.sell_order_count)}</td>
                     <td className="px-3 py-3 text-slate-300">{formatIsk(item.suggested_quantity)}</td>
                     <td className="px-3 py-3 text-slate-300">{formatIsk(item.required_isk, true)}</td>
                     <td className="px-3 py-3 text-mint">{formatIsk(item.expected_profit, true)}</td>
                     <td className="px-3 py-3"><RiskBadge risk={item.risk} /></td>
+                    <td className="max-w-[320px] px-3 py-3 text-slate-400">{item.reason}</td>
                   </tr>
                 ))}
               </tbody>

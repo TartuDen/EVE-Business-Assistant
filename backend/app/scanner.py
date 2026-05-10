@@ -1,230 +1,231 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from math import log10, log1p
-from statistics import mean
 
 from .database import get_settings
 from .esi import EsiClient
 from .models import MarketOpportunity, MarketScanRequest, MarketScanResponse
+from .safety import (
+    FeeRates,
+    HistoryStats,
+    ItemMetadata,
+    MarketOrder,
+    OrderBook,
+    SafetyFilters,
+    evaluate_opportunity,
+    history_stats,
+    is_beginner_category_allowed,
+    is_hard_excluded,
+)
 
 
-@dataclass
-class OrderBook:
-    type_id: int
-    sell_prices: list[float]
-    buy_prices: list[float]
-    sell_volume: int
-    buy_volume: int
-    order_count: int
+MAX_HISTORY_CANDIDATES = 200
 
 
-RISK_BUDGET = {
-    "conservative": 0.06,
-    "normal": 0.12,
-    "aggressive": 0.22,
-}
+def _filters_from_request(payload: MarketScanRequest) -> SafetyFilters:
+    return SafetyFilters(
+        safe_mode=payload.safe_mode,
+        minimum_daily_volume=payload.minimum_daily_volume,
+        minimum_order_count=payload.minimum_order_count,
+        minimum_sell_order_count=payload.minimum_sell_order_count,
+        minimum_buy_order_count=payload.minimum_buy_order_count,
+        minimum_margin_percent=payload.minimum_margin_percent,
+        maximum_margin_percent=payload.maximum_margin_percent,
+        maximum_required_isk_per_item=payload.max_isk_per_item,
+        minimum_estimated_profit=payload.minimum_expected_profit,
+        minimum_price=payload.minimum_price,
+        exclude_single_unit_orders=payload.exclude_single_unit_orders,
+        exclude_event_items=payload.exclude_event_items,
+        exclude_skins=payload.exclude_skins,
+        exclude_fireworks=payload.exclude_fireworks,
+        exclude_blueprints=payload.exclude_blueprints,
+        exclude_contract_only_items=payload.exclude_contract_only_items,
+    )
 
-VOLUME_TURNOVER = {
-    "conservative": 0.04,
-    "normal": 0.08,
-    "aggressive": 0.16,
-}
+
+def _build_books(orders: list[dict], station_id: int, filters: SafetyFilters) -> dict[int, OrderBook]:
+    grouped: dict[int, dict[str, list[MarketOrder]]] = defaultdict(lambda: {"sell": [], "buy": []})
+    for order in orders:
+        if int(order.get("location_id", 0)) != station_id:
+            continue
+        remaining = int(order.get("volume_remain", 0))
+        if filters.safe_mode and filters.exclude_single_unit_orders and remaining <= 1:
+            continue
+        market_order = MarketOrder(price=float(order["price"]), volume=remaining)
+        bucket = grouped[int(order["type_id"])]
+        if order.get("is_buy_order"):
+            bucket["buy"].append(market_order)
+        else:
+            bucket["sell"].append(market_order)
+
+    books: dict[int, OrderBook] = {}
+    for type_id, bucket in grouped.items():
+        buy_orders = tuple(sorted(bucket["buy"], key=lambda item: item.price, reverse=True))
+        sell_orders = tuple(sorted(bucket["sell"], key=lambda item: item.price))
+        books[type_id] = OrderBook(type_id=type_id, buy_orders=buy_orders, sell_orders=sell_orders)
+    return books
 
 
-def _average_daily_volume(history: list[dict]) -> int:
-    if not history:
-        return 0
-    recent = history[-14:]
-    return int(mean(day.get("volume", 0) for day in recent))
+def _rough_order_book_score(book: OrderBook, filters: SafetyFilters) -> float | None:
+    if not book.buy_orders or not book.sell_orders:
+        return None
+    if book.order_count < filters.minimum_order_count:
+        return None
+    if book.buy_order_count < filters.minimum_buy_order_count or book.sell_order_count < filters.minimum_sell_order_count:
+        return None
+
+    best_buy = book.best_buy
+    best_sell = book.best_sell
+    if best_buy <= 0 or best_sell <= best_buy:
+        return None
+    if best_buy < filters.minimum_price or best_sell > filters.maximum_required_isk_per_item:
+        return None
+
+    gross_margin = (best_sell - best_buy) / best_buy * 100
+    if gross_margin < filters.minimum_margin_percent:
+        return None
+    if filters.safe_mode and gross_margin > filters.maximum_margin_percent + 18:
+        return None
+
+    buy_depth = sum(order.volume for order in book.buy_orders if order.price >= best_buy * 0.95)
+    sell_depth = sum(order.volume for order in book.sell_orders if order.price <= best_sell * 1.05)
+    visible_depth = min(buy_depth, sell_depth)
+    if visible_depth < max(filters.minimum_daily_volume * 0.10, 10):
+        return None
+    if book.top_buy_quantity < 2 or book.top_sell_quantity < 2:
+        return None
+
+    moderation_bonus = max(0, 30 - abs(14 - gross_margin))
+    return moderation_bonus * log1p(visible_depth) * log10(best_buy + 10)
 
 
-def _competition_level(order_count: int, spread_percent: float) -> str:
-    if order_count > 120 or spread_percent < 4:
+def _competition_level(book: OrderBook) -> str:
+    if book.order_count >= 120:
         return "Heavy"
-    if order_count > 45 or spread_percent < 9:
+    if book.order_count >= 45:
         return "Moderate"
     return "Light"
 
 
-def _score(
-    net_margin_percent: float,
-    daily_volume: int,
-    minimum_daily_volume: int,
-    competition_level: str,
-    required_isk: float,
-    item_budget: float,
-) -> float:
-    margin_score = min(net_margin_percent / 20, 1) * 35
-    volume_score = min(daily_volume / max(minimum_daily_volume * 4, 1), 1) * 30
-    competition_multiplier = {"Light": 1.0, "Moderate": 0.72, "Heavy": 0.42}[competition_level]
-    competition_score = competition_multiplier * 20
-    affordability_score = max(0, 1 - (required_isk / max(item_budget, 1))) * 15
-    return round(margin_score + volume_score + competition_score + affordability_score, 1)
-
-
-def _risk_badge(net_margin_percent: float, daily_volume: int, competition: str, minimum_daily_volume: int) -> str:
-    if daily_volume >= minimum_daily_volume * 4 and net_margin_percent >= 8 and competition != "Heavy":
-        return "Low"
-    if daily_volume >= minimum_daily_volume * 2 and net_margin_percent >= 5:
-        return "Medium"
-    return "High"
-
-
-def _build_reason(name: str, margin: float, volume: int, competition: str, risk: str) -> str:
-    return (
-        f"{name} has a {margin:.1f}% estimated net margin after fees, "
-        f"about {volume:,} units moving per day, and {competition.lower()} visible order competition. "
-        f"Risk is marked {risk.lower()} based on margin, volume, and order pressure."
-    )
-
-
-def _build_books(orders: list[dict], station_id: int) -> dict[int, OrderBook]:
-    grouped: dict[int, dict[str, list]] = defaultdict(lambda: {"sell": [], "buy": [], "sell_vol": 0, "buy_vol": 0})
-    for order in orders:
-        if int(order.get("location_id", 0)) != station_id:
-            continue
-        type_id = int(order["type_id"])
-        price = float(order["price"])
-        remaining = int(order.get("volume_remain", 0))
-        bucket = grouped[type_id]
-        if order.get("is_buy_order"):
-            bucket["buy"].append(price)
-            bucket["buy_vol"] += remaining
-        else:
-            bucket["sell"].append(price)
-            bucket["sell_vol"] += remaining
-
-    books: dict[int, OrderBook] = {}
-    for type_id, bucket in grouped.items():
-        books[type_id] = OrderBook(
-            type_id=type_id,
-            sell_prices=bucket["sell"],
-            buy_prices=bucket["buy"],
-            sell_volume=bucket["sell_vol"],
-            buy_volume=bucket["buy_vol"],
-            order_count=len(bucket["sell"]) + len(bucket["buy"]),
+def _to_market_opportunity(evaluated, book: OrderBook, fees: FeeRates) -> MarketOpportunity:
+    return MarketOpportunity(
+        type_id=evaluated.type_id,
+        item_name=evaluated.item_name,
+        category=evaluated.category,
+        buy_price=evaluated.best_buy,
+        sell_price=evaluated.best_sell,
+        spread=evaluated.best_sell - evaluated.best_buy,
+        estimated_broker_fee=(
+            evaluated.expected_buy_price * fees.broker_fee_rate
+            + evaluated.expected_sell_price * fees.broker_fee_rate
         )
-    return books
+        * evaluated.suggested_quantity,
+        estimated_sales_tax=evaluated.expected_sell_price * fees.sales_tax_rate * evaluated.suggested_quantity,
+        net_margin_percent=round(evaluated.net_margin_percent, 2),
+        roi_percent=round(evaluated.roi_percent, 2),
+        daily_volume=int(evaluated.avg_daily_volume_30d),
+        avg_daily_volume_30d=round(evaluated.avg_daily_volume_30d, 2),
+        median_daily_volume_30d=round(evaluated.median_daily_volume_30d, 2),
+        avg_price_30d=round(evaluated.avg_price_30d, 2),
+        median_price_30d=round(evaluated.median_price_30d, 2),
+        price_volatility_30d=round(evaluated.price_volatility_30d, 4),
+        days_traded_30d=evaluated.days_traded_30d,
+        competition_level=_competition_level(book),
+        recommended_buy_price=evaluated.recommended_buy_price,
+        recommended_sell_price=evaluated.recommended_sell_price,
+        expected_buy_price=evaluated.expected_buy_price,
+        expected_sell_price=evaluated.expected_sell_price,
+        depth_buy_price=round(evaluated.depth_buy_price, 2),
+        depth_sell_price=round(evaluated.depth_sell_price, 2),
+        buy_order_count=evaluated.buy_order_count,
+        sell_order_count=evaluated.sell_order_count,
+        buy_depth_5_percent=evaluated.buy_depth_5_percent,
+        sell_depth_5_percent=evaluated.sell_depth_5_percent,
+        top_buy_quantity=evaluated.top_buy_quantity,
+        top_sell_quantity=evaluated.top_sell_quantity,
+        suggested_quantity=evaluated.suggested_quantity,
+        required_isk=round(evaluated.required_isk, 2),
+        expected_profit=round(evaluated.total_expected_profit, 2),
+        profit_per_unit=round(evaluated.profit_per_unit, 2),
+        total_expected_profit=round(evaluated.total_expected_profit, 2),
+        break_even_sell_price=round(evaluated.break_even_sell_price, 2),
+        manipulation_risk_score=round(evaluated.manipulation_risk_score, 1),
+        risk_score=round(evaluated.risk_score, 1),
+        risk=evaluated.risk,
+        score=round(evaluated.score, 1),
+        reason=evaluated.reason,
+        action=evaluated.action,
+        warning=evaluated.warning,
+    )
 
 
 async def scan_market(payload: MarketScanRequest) -> MarketScanResponse:
     app_settings = get_settings()
+    filters = _filters_from_request(payload)
+    fees = FeeRates(
+        broker_fee_rate=app_settings.broker_fee_rate,
+        sales_tax_rate=app_settings.sales_tax_rate,
+    )
     esi = EsiClient()
     orders = await esi.fetch_market_orders(payload.region_id)
-    books = _build_books(orders, payload.station_id)
+    books = _build_books(orders, payload.station_id, filters)
 
-    rough_candidates: list[tuple[int, OrderBook, float, float, float, float]] = []
+    rough_candidates: list[tuple[int, OrderBook, float]] = []
     for type_id, book in books.items():
-        if not book.sell_prices or not book.buy_prices:
-            continue
-        best_sell = min(book.sell_prices)
-        best_buy = max(book.buy_prices)
-        if best_sell <= best_buy or best_sell <= 0:
-            continue
-        spread_percent = ((best_sell - best_buy) / best_buy) * 100
-        if spread_percent < payload.minimum_margin_percent:
-            continue
-        if spread_percent > 80:
-            continue
-        if payload.max_isk_per_item and best_sell > payload.max_isk_per_item:
-            continue
-        visible_depth = min(book.sell_volume, book.buy_volume)
-        if visible_depth <= 0:
-            continue
-        plausibility_score = min(spread_percent, 30) * log1p(visible_depth) * log10(best_buy + 10)
-        rough_candidates.append((type_id, book, best_buy, best_sell, spread_percent, plausibility_score))
+        score = _rough_order_book_score(book, filters)
+        if score is not None:
+            rough_candidates.append((type_id, book, score))
 
-    rough_candidates.sort(key=lambda item: item[5], reverse=True)
-    rough_candidates = rough_candidates[: min(350, max(payload.result_limit * 12, 80))]
+    rough_candidates.sort(key=lambda item: item[2], reverse=True)
+    rough_candidates = rough_candidates[: max(MAX_HISTORY_CANDIDATES, payload.result_limit)]
 
     type_ids = [candidate[0] for candidate in rough_candidates]
-    histories = await esi.fetch_histories(payload.region_id, type_ids)
     names = await esi.resolve_names(type_ids)
 
+    named_candidates: list[tuple[int, OrderBook, float]] = []
+    for type_id, book, score in rough_candidates:
+        metadata = ItemMetadata(name=names.get(type_id, f"Type {type_id}"))
+        if filters.safe_mode and is_hard_excluded(metadata, filters):
+            continue
+        named_candidates.append((type_id, book, score))
+
+    metadata_by_type = await esi.fetch_type_metadata(
+        [candidate[0] for candidate in named_candidates],
+        names,
+    )
+
+    metadata_candidates: list[tuple[int, OrderBook, float]] = []
+    for type_id, book, score in named_candidates:
+        metadata = metadata_by_type.get(type_id, ItemMetadata(name=names.get(type_id, f"Type {type_id}")))
+        if filters.safe_mode and (is_hard_excluded(metadata, filters) or not is_beginner_category_allowed(metadata)):
+            continue
+        metadata_candidates.append((type_id, book, score))
+
+    metadata_candidates = metadata_candidates[:MAX_HISTORY_CANDIDATES]
+    histories = await esi.fetch_histories(payload.region_id, [candidate[0] for candidate in metadata_candidates])
+
     opportunities: list[MarketOpportunity] = []
-    capital_budget = payload.starting_capital * RISK_BUDGET[payload.risk_level]
-    for type_id, book, best_buy, best_sell, spread_percent, _candidate_score in rough_candidates:
-        daily_volume = _average_daily_volume(histories.get(type_id, []))
-        if daily_volume < payload.minimum_daily_volume:
-            continue
-
-        recommended_buy = round(best_buy * 1.0001, 2)
-        recommended_sell = round(best_sell * 0.9999, 2)
-        broker_fee_per_unit = (recommended_buy + recommended_sell) * app_settings.broker_fee_rate
-        sales_tax_per_unit = recommended_sell * app_settings.sales_tax_rate
-        net_profit_per_unit = recommended_sell - recommended_buy - broker_fee_per_unit - sales_tax_per_unit
-        if net_profit_per_unit <= 0:
-            continue
-
-        required_per_unit = recommended_buy * (1 + app_settings.broker_fee_rate)
-        net_margin = (net_profit_per_unit / required_per_unit) * 100
-        if net_margin < payload.minimum_margin_percent:
-            continue
-
-        item_budget = payload.max_isk_per_item if payload.max_isk_per_item > 0 else capital_budget
-        item_budget = min(item_budget, capital_budget)
-        safe_by_budget = int(item_budget // required_per_unit)
-        safe_by_volume = max(1, int(daily_volume * VOLUME_TURNOVER[payload.risk_level]))
-        safe_by_supply = max(1, int(book.sell_volume * 0.08))
-        suggested_quantity = max(0, min(safe_by_budget, safe_by_volume, safe_by_supply))
-        if suggested_quantity <= 0:
-            continue
-
-        required_isk = required_per_unit * suggested_quantity
-        expected_profit = net_profit_per_unit * suggested_quantity
-        if expected_profit < payload.minimum_expected_profit:
-            continue
-
-        if spread_percent > 70 and daily_volume < payload.minimum_daily_volume * 4:
-            continue
-
-        competition = _competition_level(book.order_count, spread_percent)
-        risk = _risk_badge(net_margin, daily_volume, competition, payload.minimum_daily_volume)
-        score = _score(
-            net_margin,
-            daily_volume,
-            payload.minimum_daily_volume,
-            competition,
-            required_isk,
-            item_budget,
+    for type_id, book, _score in metadata_candidates:
+        metadata = metadata_by_type.get(type_id, ItemMetadata(name=names.get(type_id, f"Type {type_id}")))
+        stats: HistoryStats = history_stats(histories.get(type_id, []))
+        evaluated = evaluate_opportunity(
+            book=book,
+            metadata=metadata,
+            stats=stats,
+            filters=filters,
+            fees=fees,
+            liquid_isk=payload.starting_capital,
         )
-        name = names.get(type_id, f"Type {type_id}")
-        action = (
-            f"Place a buy order around {recommended_buy:,.2f} ISK. "
-            f"After it fills, relist around {recommended_sell:,.2f} ISK. "
-            "Do this manually in the EVE client."
-        )
-        opportunities.append(
-            MarketOpportunity(
-                type_id=type_id,
-                item_name=name,
-                buy_price=best_buy,
-                sell_price=best_sell,
-                spread=best_sell - best_buy,
-                estimated_broker_fee=broker_fee_per_unit * suggested_quantity,
-                estimated_sales_tax=sales_tax_per_unit * suggested_quantity,
-                net_margin_percent=round(net_margin, 2),
-                daily_volume=daily_volume,
-                competition_level=competition,
-                recommended_buy_price=recommended_buy,
-                recommended_sell_price=recommended_sell,
-                suggested_quantity=suggested_quantity,
-                required_isk=round(required_isk, 2),
-                expected_profit=round(expected_profit, 2),
-                risk=risk,
-                score=score,
-                reason=_build_reason(name, net_margin, daily_volume, competition, risk),
-                action=action,
-            )
-        )
+        if evaluated is None:
+            continue
+        opportunities.append(_to_market_opportunity(evaluated, book, fees))
 
     opportunities.sort(key=lambda item: item.score, reverse=True)
     return MarketScanResponse(
         scanned_at=datetime.now(timezone.utc),
-        source="ESI public market endpoints",
+        source="ESI public market orders, type metadata, and capped market history",
         total_orders_seen=len(orders),
         total_station_orders=sum(1 for order in orders if int(order.get("location_id", 0)) == payload.station_id),
         opportunities=opportunities[: payload.result_limit],

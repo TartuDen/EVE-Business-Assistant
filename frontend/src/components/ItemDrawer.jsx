@@ -34,10 +34,27 @@ export function ItemDrawer({ item, onClose }) {
           <section className="grid grid-cols-2 gap-3">
             <Metric label="Buy around" value={`${formatIsk(item.recommended_buy_price)} ISK`} />
             <Metric label="Sell around" value={`${formatIsk(item.recommended_sell_price)} ISK`} />
-            <Metric label="Daily volume" value={formatIsk(item.daily_volume)} />
+            <Metric label="30d avg volume" value={formatIsk(item.avg_daily_volume_30d)} />
+            <Metric label="30d median price" value={`${formatIsk(item.median_price_30d)} ISK`} />
             <Metric label="Net margin" value={`${item.net_margin_percent.toFixed(2)}%`} />
+            <Metric label="Profit per unit" value={`${formatIsk(item.profit_per_unit)} ISK`} />
             <Metric label="Required ISK" value={`${formatIsk(item.required_isk, true)} ISK`} />
             <Metric label="Expected profit" value={`${formatIsk(item.expected_profit, true)} ISK`} />
+            <Metric label="Break-even sell" value={`${formatIsk(item.break_even_sell_price)} ISK`} />
+            <Metric label="Manipulation risk" value={`${item.manipulation_risk_score.toFixed(1)}/100`} />
+          </section>
+
+          <section className="grid grid-cols-2 gap-3">
+            <Metric label="Buy orders" value={formatIsk(item.buy_order_count)} />
+            <Metric label="Sell orders" value={formatIsk(item.sell_order_count)} />
+            <Metric label="Buy depth within 5%" value={formatIsk(item.buy_depth_5_percent)} />
+            <Metric label="Sell depth within 5%" value={formatIsk(item.sell_depth_5_percent)} />
+            <Metric label="Top buy quantity" value={formatIsk(item.top_buy_quantity)} />
+            <Metric label="Top sell quantity" value={formatIsk(item.top_sell_quantity)} />
+            <Metric label="Depth buy price" value={`${formatIsk(item.depth_buy_price)} ISK`} />
+            <Metric label="Depth sell price" value={`${formatIsk(item.depth_sell_price)} ISK`} />
+            <Metric label="Days traded" value={`${item.days_traded_30d}/30`} />
+            <Metric label="Volatility" value={`${(item.price_volatility_30d * 100).toFixed(1)}%`} />
           </section>
 
           <section className="rounded-lg border border-cyan/30 bg-cyan/8 p-4">
@@ -46,7 +63,8 @@ export function ItemDrawer({ item, onClose }) {
           </section>
 
           <section className="rounded-lg border border-line bg-panel p-4">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Possible risk</div>
+            <div className="text-xs uppercase tracking-wide text-slate-400">Warning</div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{item.warning}</p>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Prices can move before your order fills. Keep the quantity near the suggestion, check the order book in game, and avoid chasing fast reprices.
             </p>
