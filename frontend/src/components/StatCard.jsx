@@ -1,3 +1,5 @@
+import React from "react";
+
 export function StatCard({ label, value, detail }) {
   return (
     <section className="rounded-lg border border-line bg-panel px-4 py-3">

@@ -1,3 +1,5 @@
+import React from "react";
+
 export function RiskBadge({ risk }) {
   const classes = {
     Low: "border-mint/40 bg-mint/12 text-mint",

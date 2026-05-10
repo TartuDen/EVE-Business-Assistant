@@ -1,3 +1,4 @@
+import React from "react";
 import { PlayCircle } from "lucide-react";
 import { formatIsk } from "../lib/api.js";
 import { StatCard } from "../components/StatCard.jsx";

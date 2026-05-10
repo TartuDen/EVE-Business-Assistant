@@ -1,3 +1,4 @@
+import React from "react";
 import { Eye } from "lucide-react";
 import { RiskBadge } from "../components/RiskBadge.jsx";
 import { formatIsk } from "../lib/api.js";

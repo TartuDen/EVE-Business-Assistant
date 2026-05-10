@@ -1,3 +1,4 @@
+import React from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api, formatIsk } from "../lib/api.js";

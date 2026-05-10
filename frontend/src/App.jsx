@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BarChart3, BriefcaseBusiness, Eye, Factory, Gauge, Settings, Star } from "lucide-react";
 import { api, formatIsk } from "./lib/api.js";
 import { Dashboard } from "./pages/Dashboard.jsx";

@@ -1,3 +1,4 @@
+import React from "react";
 import { Factory } from "lucide-react";
 
 export function Manufacturing() {
