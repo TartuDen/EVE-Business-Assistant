@@ -55,10 +55,34 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
-      <aside className="rounded-lg border border-line bg-panel p-4 xl:sticky xl:top-4 xl:self-start">
-        <h2 className="text-base font-semibold text-white">Filters</h2>
-        <div className="mt-4 space-y-4">
+    <div className="space-y-4">
+      <aside className="rounded-lg border border-line bg-panel p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-white">Scanner filters</h2>
+            <p className="mt-1 text-sm text-slate-400">Safe mode favors liquid, normal Jita items over large fragile spreads.</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={scan}
+              disabled={loading}
+              className="flex min-w-36 items-center justify-center gap-2 rounded-md bg-cyan px-4 py-3 font-semibold text-hull disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <PlayCircle size={19} />
+              {loading ? "Scanning..." : "Scan Market"}
+            </button>
+            {scanResult?.opportunities?.length ? (
+              <a
+                className="flex min-w-32 items-center justify-center gap-2 rounded-md border border-line px-4 py-3 text-sm text-slate-200 hover:border-cyan hover:text-cyan"
+                href={api.csvUrl()}
+              >
+                <Download size={17} />
+                Export CSV
+              </a>
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
           <label className="flex items-center justify-between gap-3 rounded-md border border-line bg-hull px-3 py-2 text-sm text-slate-200">
             <span>Beginner safe mode</span>
             <input
@@ -86,23 +110,6 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
               <option value="aggressive">Aggressive</option>
             </select>
           </label>
-          <button
-            onClick={scan}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan px-4 py-3 font-semibold text-hull disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <PlayCircle size={19} />
-            {loading ? "Scanning..." : "Scan Market"}
-          </button>
-          {scanResult?.opportunities?.length ? (
-            <a
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-line px-4 py-3 text-sm text-slate-200 hover:border-cyan hover:text-cyan"
-              href={api.csvUrl()}
-            >
-              <Download size={17} />
-              Export CSV
-            </a>
-          ) : null}
         </div>
       </aside>
 
@@ -120,22 +127,22 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
         </div>
 
         <div className="overflow-hidden rounded-lg border border-line bg-panel">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1220px] text-left text-sm">
+          <div>
+            <table className="w-full table-fixed text-left text-xs xl:text-sm">
               <thead className="border-b border-line bg-hull text-xs uppercase tracking-wide text-slate-400">
                 <tr>
-                  <th className="px-3 py-3">Item</th>
-                  <th className="px-3 py-3">Category</th>
-                  <th className="px-3 py-3">Buy Price</th>
-                  <th className="px-3 py-3">Sell Price</th>
-                  <th className="px-3 py-3">Net Margin %</th>
-                  <th className="px-3 py-3">30d Volume</th>
-                  <th className="px-3 py-3">Order Count</th>
-                  <th className="px-3 py-3">Suggested Qty</th>
-                  <th className="px-3 py-3">Required ISK</th>
-                  <th className="px-3 py-3">Expected Profit</th>
-                  <th className="px-3 py-3">Risk</th>
-                  <th className="px-3 py-3">Why Recommended</th>
+                  <th className="w-[13%] px-2 py-3">Item</th>
+                  <th className="w-[8%] px-2 py-3">Category</th>
+                  <th className="w-[8%] px-2 py-3">Buy Price</th>
+                  <th className="w-[8%] px-2 py-3">Sell Price</th>
+                  <th className="w-[7%] px-2 py-3">Net Margin %</th>
+                  <th className="w-[7%] px-2 py-3">30d Volume</th>
+                  <th className="w-[6%] px-2 py-3">Order Count</th>
+                  <th className="w-[6%] px-2 py-3">Suggested Qty</th>
+                  <th className="w-[8%] px-2 py-3">Required ISK</th>
+                  <th className="w-[8%] px-2 py-3">Expected Profit</th>
+                  <th className="w-[6%] px-2 py-3">Risk</th>
+                  <th className="w-[15%] px-2 py-3">Why Recommended</th>
                 </tr>
               </thead>
               <tbody>
@@ -145,18 +152,18 @@ export function MarketScanner({ settings, scanResult, setScanResult, setError })
                     className="cursor-pointer border-b border-line/70 hover:bg-cyan/6"
                     onClick={() => setSelected(item)}
                   >
-                    <td className="px-3 py-3 font-medium text-white">{item.item_name}</td>
-                    <td className="px-3 py-3 text-slate-400">{item.category}</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.recommended_buy_price)}</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.recommended_sell_price)}</td>
-                    <td className="px-3 py-3 text-mint">{item.net_margin_percent.toFixed(2)}%</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.avg_daily_volume_30d)}</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.buy_order_count + item.sell_order_count)}</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.suggested_quantity)}</td>
-                    <td className="px-3 py-3 text-slate-300">{formatIsk(item.required_isk, true)}</td>
-                    <td className="px-3 py-3 text-mint">{formatIsk(item.expected_profit, true)}</td>
-                    <td className="px-3 py-3"><RiskBadge risk={item.risk} /></td>
-                    <td className="max-w-[320px] px-3 py-3 text-slate-400">{item.reason}</td>
+                    <td className="break-words px-2 py-3 font-medium text-white">{item.item_name}</td>
+                    <td className="break-words px-2 py-3 text-slate-400">{item.category}</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.recommended_buy_price)}</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.recommended_sell_price)}</td>
+                    <td className="break-words px-2 py-3 text-mint">{item.net_margin_percent.toFixed(2)}%</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.avg_daily_volume_30d)}</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.buy_order_count + item.sell_order_count)}</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.suggested_quantity)}</td>
+                    <td className="break-words px-2 py-3 text-slate-300">{formatIsk(item.required_isk, true)}</td>
+                    <td className="break-words px-2 py-3 text-mint">{formatIsk(item.expected_profit, true)}</td>
+                    <td className="px-2 py-3"><RiskBadge risk={item.risk} /></td>
+                    <td className="break-words px-2 py-3 leading-5 text-slate-400">{item.reason}</td>
                   </tr>
                 ))}
               </tbody>

@@ -49,11 +49,12 @@ export function App() {
     }),
     [portfolio, settings, bestOpportunity],
   );
+  const isScanner = activeTab === "scanner";
 
   return (
     <div className="min-h-screen">
       <div className="border-b border-line bg-hull/95">
-        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-4 py-4">
+        <div className={`mx-auto flex items-center justify-between px-4 py-4 ${isScanner ? "max-w-none" : "max-w-[1480px]"}`}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan/40 bg-cyan/10 text-cyan">
               <Star size={20} />
@@ -70,9 +71,9 @@ export function App() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-0 px-4 lg:grid-cols-[220px_1fr]">
-        <nav className="border-b border-line py-3 lg:min-h-[calc(100vh-73px)] lg:border-b-0 lg:border-r lg:pr-4">
-          <div className="flex gap-2 overflow-x-auto lg:flex-col">
+      <div className={`mx-auto grid grid-cols-1 gap-0 px-4 ${isScanner ? "max-w-none" : "max-w-[1480px] lg:grid-cols-[220px_1fr]"}`}>
+        <nav className={`border-b border-line py-3 ${isScanner ? "" : "lg:min-h-[calc(100vh-73px)] lg:border-b-0 lg:border-r lg:pr-4"}`}>
+          <div className={`flex gap-2 overflow-x-auto ${isScanner ? "" : "lg:flex-col"}`}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const selected = activeTab === tab.id;
@@ -94,7 +95,7 @@ export function App() {
           </div>
         </nav>
 
-        <main className="py-5 lg:pl-5">
+        <main className={`py-5 ${isScanner ? "" : "lg:pl-5"}`}>
           {error ? (
             <div className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
               {error}
