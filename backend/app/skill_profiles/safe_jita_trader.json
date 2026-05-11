@@ -1,0 +1,31 @@
+{
+  "profile_id": "safe_jita_trader",
+  "display_name": "Safe Jita Trader",
+  "description": "Low-risk market trading focused on lower taxes, lower broker fees, and more manual order flexibility.",
+  "recommended_for": "Solo Alpha or Omega pilots who want repeatable station trading in Jita.",
+  "skill_priorities": ["fees", "order_count", "remote_trading", "business_foundation"],
+  "required_skills": [
+    {"skill_id": 3443, "name": "Trade", "target_level": 4, "priority": 95, "reason": "Increases active market orders so you can test more small trades.", "economic_impact": "More simultaneous orders and less missed opportunity."},
+    {"skill_id": 16622, "name": "Accounting", "target_level": 4, "priority": 100, "reason": "Reduces sales tax on every completed sell order.", "economic_impact": "Permanent profit improvement on every sale."},
+    {"skill_id": 3446, "name": "Broker Relations", "target_level": 4, "priority": 100, "reason": "Reduces broker fees when placing market orders.", "economic_impact": "Improves margins before every trade starts."},
+    {"skill_id": 3444, "name": "Retail", "target_level": 3, "priority": 85, "reason": "Adds more market order slots after basic Trade.", "economic_impact": "Lets you spread risk across more items."},
+    {"skill_id": 16598, "name": "Marketing", "target_level": 2, "priority": 55, "reason": "Lets you sell items remotely within range.", "economic_impact": "Saves travel time when managing orders."}
+  ],
+  "optional_skills": [
+    {"skill_id": 16595, "name": "Daytrading", "target_level": 3, "priority": 70, "reason": "Lets you modify orders remotely.", "economic_impact": "Less travel to keep orders competitive."},
+    {"skill_id": 16594, "name": "Procurement", "target_level": 2, "priority": 45, "reason": "Lets you place remote buy orders.", "economic_impact": "Useful after you understand regional trading."},
+    {"skill_id": 16596, "name": "Visibility", "target_level": 2, "priority": 40, "reason": "Extends remote buy order range.", "economic_impact": "Better for regional trading later."}
+  ],
+  "omega_only_skills": [
+    {"skill_id": 3447, "name": "Wholesale", "target_level": 3, "priority": 50, "reason": "Large increase to market order slots for serious traders.", "economic_impact": "Scales trading capacity after Alpha basics."}
+  ],
+  "warnings": [
+    "Do not train expensive ship specializations before market fee skills if trading is your main goal.",
+    "Alpha characters can trade effectively, but high-volume trading scales better with Omega market order skills."
+  ],
+  "milestones": [
+    {"name": "Fee Basics", "days": "1-3 days", "skills": ["Accounting II", "Broker Relations II", "Trade III"]},
+    {"name": "Stable Trader", "days": "1-2 weeks", "skills": ["Accounting IV", "Broker Relations IV", "Retail III"]},
+    {"name": "Remote Order Control", "days": "1-2 months", "skills": ["Daytrading III", "Marketing II", "Procurement II"]}
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "profile_id": "pvp_frigate",
+  "display_name": "PvP Frigate Pilot",
+  "description": "Cheap frigate combat fundamentals before expensive specialization.",
+  "recommended_for": "Pilots who want to learn PvP with low replacement cost.",
+  "skill_priorities": ["fitting", "navigation", "tank", "weapon_basics"],
+  "required_skills": [
+    {"skill_id": 3413, "name": "Power Grid Management", "target_level": 4, "priority": 90, "reason": "Improves fitting room on almost every ship.", "economic_impact": "Fits cheaper practical ships without overpaying for modules."},
+    {"skill_id": 3426, "name": "CPU Management", "target_level": 4, "priority": 90, "reason": "Improves CPU fitting room.", "economic_impact": "Makes beginner fits easier and cheaper."},
+    {"skill_id": 3449, "name": "Navigation", "target_level": 4, "priority": 80, "reason": "Improves ship speed.", "economic_impact": "Better survival and range control."}
+  ],
+  "optional_skills": [
+    {"skill_id": 3300, "name": "Gunnery", "target_level": 4, "priority": 65, "reason": "Improves turret weapon foundation.", "economic_impact": "More effective cheap frigate damage."}
+  ],
+  "omega_only_skills": [],
+  "warnings": ["Do not jump directly into expensive PvP hulls; learn in cheap frigates first."],
+  "milestones": [
+    {"name": "Can Fit Ships", "days": "1-3 days", "skills": ["CPU Management III", "Power Grid Management III"]},
+    {"name": "Frigate Basics", "days": "1-2 weeks", "skills": ["Navigation IV", "weapon basics"]},
+    {"name": "Specialization", "days": "1-2 months", "skills": ["tank and weapon support skills"]}
+  ]
+}

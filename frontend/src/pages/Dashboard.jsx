@@ -7,7 +7,7 @@ import { RiskBadge } from "../components/RiskBadge.jsx";
 export function Dashboard({ stats, portfolio, onScan }) {
   return (
     <div className="space-y-5">
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
         <StatCard label="Total ISK" value={`${formatIsk(stats.totalIsk, true)} ISK`} />
         <StatCard label="Invested ISK" value={`${formatIsk(stats.invested, true)} ISK`} />
         <StatCard label="Open Orders" value={stats.openOrders} />
@@ -18,6 +18,7 @@ export function Dashboard({ stats, portfolio, onScan }) {
           detail={stats.bestOpportunity ? `${formatIsk(stats.bestOpportunity.expected_profit, true)} ISK expected` : ""}
         />
         <StatCard label="Risk Level" value={stats.bestOpportunity ? <RiskBadge risk={stats.bestOpportunity.risk} /> : "None"} />
+        <StatCard label="Next Best Skill" value="Connect SSO" detail="Character Progression" />
       </section>
 
       <section className="flex flex-col gap-4 border-y border-line py-6 md:flex-row md:items-center md:justify-between">

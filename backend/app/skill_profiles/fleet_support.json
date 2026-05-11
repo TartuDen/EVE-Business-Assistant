@@ -1,0 +1,20 @@
+{
+  "profile_id": "fleet_support",
+  "display_name": "Fleet Support",
+  "description": "Support roles that help fleets through logistics, ewar, and command foundations.",
+  "recommended_for": "Pilots who want group usefulness over solo damage.",
+  "skill_priorities": ["fitting", "capacitor", "ewar", "logistics"],
+  "required_skills": [
+    {"skill_id": 3413, "name": "Power Grid Management", "target_level": 4, "priority": 80, "reason": "Core fitting skill.", "economic_impact": "Cheaper useful fleet fits."},
+    {"skill_id": 3426, "name": "CPU Management", "target_level": 4, "priority": 80, "reason": "Core fitting skill.", "economic_impact": "More module options."},
+    {"skill_id": 3428, "name": "Long Range Targeting", "target_level": 3, "priority": 55, "reason": "Improves lock range.", "economic_impact": "More effective support positioning."}
+  ],
+  "optional_skills": [{"skill_id": 3431, "name": "Signature Analysis", "target_level": 3, "priority": 45, "reason": "Faster target locking.", "economic_impact": "Faster fleet reactions."}],
+  "omega_only_skills": [],
+  "warnings": ["Support roles need practice and fleet context; skills alone are not enough."],
+  "milestones": [
+    {"name": "Useful Basics", "days": "1-3 days", "skills": ["targeting and fitting basics"]},
+    {"name": "Fleet Ready", "days": "1-2 weeks", "skills": ["support role III-IV"]},
+    {"name": "Specialization", "days": "1-2 months", "skills": ["logistics or ewar path"]}
+  ]
+}

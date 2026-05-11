@@ -1,0 +1,20 @@
+{
+  "profile_id": "pvp_cruiser",
+  "display_name": "PvP Cruiser Pilot",
+  "description": "Cruiser combat path after fitting and navigation foundations.",
+  "recommended_for": "Pilots ready to move beyond cheap frigate practice.",
+  "skill_priorities": ["fitting", "navigation", "tank", "medium_weapons"],
+  "required_skills": [
+    {"skill_id": 3413, "name": "Power Grid Management", "target_level": 5, "priority": 90, "reason": "Cruisers are fitting-constrained.", "economic_impact": "Better fits without expensive compromises."},
+    {"skill_id": 3426, "name": "CPU Management", "target_level": 5, "priority": 90, "reason": "More CPU for cruiser modules.", "economic_impact": "More practical cruiser fits."},
+    {"skill_id": 3449, "name": "Navigation", "target_level": 4, "priority": 70, "reason": "Improves speed and positioning.", "economic_impact": "Better survival."}
+  ],
+  "optional_skills": [{"skill_id": 3300, "name": "Gunnery", "target_level": 5, "priority": 60, "reason": "Weapon foundation.", "economic_impact": "Improves damage application."}],
+  "omega_only_skills": [],
+  "warnings": ["Cruisers cost more to lose; keep frigate practice cheap first."],
+  "milestones": [
+    {"name": "Fitting First", "days": "1-2 weeks", "skills": ["CPU IV", "Power Grid IV"]},
+    {"name": "Cruiser Ready", "days": "1-2 months", "skills": ["tank, navigation, weapons"]},
+    {"name": "Specialized Fits", "days": "2+ months", "skills": ["advanced support skills"]}
+  ]
+}

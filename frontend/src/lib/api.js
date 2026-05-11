@@ -63,6 +63,32 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
+  getCharacterSession() {
+    return request("/api/character/session");
+  },
+  getCharacterLogin() {
+    return request("/api/character/login");
+  },
+  getCharacterProfiles() {
+    return request("/api/character/profiles");
+  },
+  getCharacterAnalysis(profileId = "safe_jita_trader", characterId = null) {
+    const params = new URLSearchParams({ profile_id: profileId });
+    if (characterId) params.set("character_id", characterId);
+    return request(`/api/character/analysis?${params.toString()}`);
+  },
+  getSavedPlans() {
+    return request("/api/character/saved-plans");
+  },
+  saveSkillPlan(payload) {
+    return request("/api/character/saved-plans", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteSkillPlan(id) {
+    return request(`/api/character/saved-plans/${id}`, { method: "DELETE" });
+  },
 };
 
 export function formatIsk(value, compact = false) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BarChart3, BriefcaseBusiness, Eye, Factory, Gauge, Settings, Star } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, Eye, Factory, Gauge, Settings, Star, UserRoundCog } from "lucide-react";
 import { api, formatIsk } from "./lib/api.js";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { MarketScanner } from "./pages/MarketScanner.jsx";
@@ -7,11 +7,13 @@ import { Portfolio } from "./pages/Portfolio.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
 import { Watchlist } from "./pages/Watchlist.jsx";
 import { Manufacturing } from "./pages/Manufacturing.jsx";
+import { CharacterProgression } from "./pages/CharacterProgression.jsx";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: Gauge },
   { id: "scanner", label: "Market Scanner", icon: BarChart3 },
   { id: "portfolio", label: "Portfolio", icon: BriefcaseBusiness },
+  { id: "character", label: "Character Progression", icon: UserRoundCog },
   { id: "watchlist", label: "Watchlist", icon: Eye },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "manufacturing", label: "Manufacturing", icon: Factory },
@@ -124,6 +126,7 @@ export function App() {
               setError={setError}
             />
           )}
+          {activeTab === "character" && <CharacterProgression setError={setError} />}
           {activeTab === "watchlist" && <Watchlist opportunities={scanResult?.opportunities ?? []} />}
           {activeTab === "settings" && (
             <SettingsPage

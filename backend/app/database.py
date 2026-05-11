@@ -55,6 +55,42 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS character_tokens (
+                character_id INTEGER PRIMARY KEY,
+                character_name TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                scopes TEXT NOT NULL,
+                token_type TEXT NOT NULL DEFAULT 'Bearer',
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oauth_states (
+                state TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS saved_skill_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER,
+                character_name TEXT NOT NULL,
+                profile_id TEXT NOT NULL,
+                plan_name TEXT NOT NULL,
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
         defaults = {
             "total_liquid_isk": "365000000",
             "broker_fee_rate": str(settings.broker_fee_rate),
@@ -181,3 +217,98 @@ def save_settings(payload: SettingsPayload) -> SettingsPayload:
                 (key, str(value)),
             )
     return payload
+
+
+def save_oauth_state(state: str) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO oauth_states (state, created_at) VALUES (?, ?)",
+            (state, utc_now()),
+        )
+
+
+def consume_oauth_state(state: str) -> bool:
+    with connect() as conn:
+        row = conn.execute("SELECT state FROM oauth_states WHERE state = ?", (state,)).fetchone()
+        if row:
+            conn.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+    return row is not None
+
+
+def save_character_token(
+    character_id: int,
+    character_name: str,
+    access_token: str,
+    refresh_token: str,
+    expires_at: str,
+    scopes: list[str],
+    token_type: str = "Bearer",
+) -> None:
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO character_tokens
+            (character_id, character_name, access_token, refresh_token, expires_at, scopes, token_type, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                character_id,
+                character_name,
+                access_token,
+                refresh_token,
+                expires_at,
+                " ".join(scopes),
+                token_type,
+                utc_now(),
+            ),
+        )
+
+
+def get_character_token(character_id: int | None = None) -> sqlite3.Row | None:
+    with connect() as conn:
+        if character_id is not None:
+            return conn.execute(
+                "SELECT * FROM character_tokens WHERE character_id = ?",
+                (character_id,),
+            ).fetchone()
+        return conn.execute(
+            "SELECT * FROM character_tokens ORDER BY updated_at DESC LIMIT 1"
+        ).fetchone()
+
+
+def list_character_tokens() -> list[sqlite3.Row]:
+    with connect() as conn:
+        return conn.execute(
+            "SELECT character_id, character_name, expires_at, scopes, updated_at FROM character_tokens ORDER BY updated_at DESC"
+        ).fetchall()
+
+
+def delete_character_token(character_id: int) -> bool:
+    with connect() as conn:
+        cursor = conn.execute("DELETE FROM character_tokens WHERE character_id = ?", (character_id,))
+    return cursor.rowcount > 0
+
+
+def list_saved_plans() -> list[sqlite3.Row]:
+    with connect() as conn:
+        return conn.execute("SELECT * FROM saved_skill_plans ORDER BY updated_at DESC").fetchall()
+
+
+def create_saved_plan(character_id: int | None, character_name: str, profile_id: str, plan_name: str, notes: str) -> sqlite3.Row:
+    now = utc_now()
+    with connect() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO saved_skill_plans
+            (character_id, character_name, profile_id, plan_name, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (character_id, character_name, profile_id, plan_name, notes, now, now),
+        )
+        return conn.execute("SELECT * FROM saved_skill_plans WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def delete_saved_plan(plan_id: int) -> bool:
+    with connect() as conn:
+        cursor = conn.execute("DELETE FROM saved_skill_plans WHERE id = ?", (plan_id,))
+    return cursor.rowcount > 0

@@ -35,7 +35,20 @@ Open `http://localhost:5173`.
 - The scanner uses The Forge (`10000002`) and Jita 4-4 (`60003760`) by default.
 - ESI market order data is cached by CCP and paginated. You can tune `EBA_MARKET_MAX_PAGES` for speed versus coverage. Set it to `0` to fetch every available page.
 - Fees are configurable in Settings. Defaults are intentionally conservative for new traders.
-- Phase 2 will add EVE SSO OAuth 2.0 for private character data. MVP does not require login.
+- Market scanning does not require login. Character Progression requires EVE SSO.
+
+## Character Progression SSO
+
+The Character Progression module uses official EVE SSO and authenticated ESI routes. Register an EVE developer application and set:
+
+```powershell
+$env:EVE_CLIENT_ID="your-client-id"
+$env:EVE_CLIENT_SECRET="your-secret-key"
+$env:EVE_CALLBACK_URL="http://127.0.0.1:8000/api/character/callback"
+$env:EBA_FRONTEND_BASE_URL="http://127.0.0.1:5174"
+```
+
+Use the same callback URL in the EVE developer application. Restart the backend after setting these values.
 
 ## Legal boundary
 

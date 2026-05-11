@@ -1,0 +1,22 @@
+{
+  "profile_id": "explorer",
+  "display_name": "Explorer",
+  "description": "Scanning, hacking, and survival basics for exploration income.",
+  "recommended_for": "Pilots who want low-capital income outside trade hubs.",
+  "skill_priorities": ["scanning", "hacking", "survival"],
+  "required_skills": [
+    {"skill_id": 13278, "name": "Archaeology", "target_level": 3, "priority": 80, "reason": "Improves relic site hacking.", "economic_impact": "More successful cans and fewer failed sites."},
+    {"skill_id": 21718, "name": "Hacking", "target_level": 3, "priority": 80, "reason": "Improves data site hacking.", "economic_impact": "More reliable exploration loot."},
+    {"skill_id": 3412, "name": "Astrometrics", "target_level": 4, "priority": 90, "reason": "Improves probe scanning.", "economic_impact": "Finds sites faster."}
+  ],
+  "optional_skills": [
+    {"skill_id": 25810, "name": "Astrometric Rangefinding", "target_level": 3, "priority": 55, "reason": "Improves scan strength.", "economic_impact": "Reduces time wasted scanning difficult sites."}
+  ],
+  "omega_only_skills": [],
+  "warnings": ["Exploration income varies heavily; do not carry more loot than you can afford to lose."],
+  "milestones": [
+    {"name": "Probe Basics", "days": "1-3 days", "skills": ["Astrometrics III", "Hacking II"]},
+    {"name": "Reliable Hacking", "days": "1-2 weeks", "skills": ["Hacking III", "Archaeology III"]},
+    {"name": "Faster Scanning", "days": "1-2 months", "skills": ["Astrometrics IV", "support scanning skills"]}
+  ]
+}

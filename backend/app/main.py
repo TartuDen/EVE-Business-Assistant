@@ -5,8 +5,22 @@ from io import StringIO
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 
+from .character_progression import (
+    analyze_character,
+    authenticated_character_data,
+    create_login_url,
+    disconnect_character,
+    exchange_code_for_token,
+    get_profile,
+    load_profiles,
+    remove_plan,
+    save_plan,
+    saved_plans,
+    session_summary,
+)
+from .config import settings
 from .database import (
     create_position,
     delete_position,
@@ -164,3 +178,58 @@ def read_settings() -> SettingsPayload:
 @app.put("/api/settings", response_model=SettingsPayload)
 def write_settings(payload: SettingsPayload) -> SettingsPayload:
     return save_settings(payload)
+
+
+@app.get("/api/character/session")
+def character_session() -> dict:
+    return session_summary()
+
+
+@app.get("/api/character/login")
+def character_login() -> dict:
+    return create_login_url()
+
+
+@app.get("/api/character/callback")
+async def character_callback(code: str, state: str) -> RedirectResponse:
+    await exchange_code_for_token(code, state)
+    return RedirectResponse(f"{settings.frontend_base_url}?character_login=success")
+
+
+@app.post("/api/character/disconnect/{character_id}")
+def character_disconnect(character_id: int) -> dict[str, bool]:
+    return {"deleted": disconnect_character(character_id)}
+
+
+@app.get("/api/character/profiles")
+def character_profiles() -> list[dict]:
+    return load_profiles()
+
+
+@app.get("/api/character/profiles/{profile_id}")
+def character_profile(profile_id: str) -> dict:
+    return get_profile(profile_id)
+
+
+@app.get("/api/character/analysis")
+async def character_analysis(profile_id: str = "safe_jita_trader", character_id: int | None = None) -> dict:
+    payload = await authenticated_character_data(character_id)
+    return analyze_character(payload, profile_id)
+
+
+@app.get("/api/character/saved-plans")
+def character_saved_plans() -> list[dict]:
+    return saved_plans()
+
+
+@app.post("/api/character/saved-plans")
+def character_save_plan(payload: dict) -> dict:
+    return save_plan(payload)
+
+
+@app.delete("/api/character/saved-plans/{plan_id}")
+def character_delete_plan(plan_id: int) -> dict[str, bool]:
+    deleted = remove_plan(plan_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Saved plan not found.")
+    return {"deleted": True}
